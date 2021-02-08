@@ -35,7 +35,7 @@ function download {
 
 
   if [[ ${HELM_VER} == "v3" ]]; then
-    if [[ $(helmv3 repo list -o yaml  | yq r - "[*].name" | grep "$CHART_REPO_MD5") == "$CHART_REPO_MD5" ]]; then
+    if [[ $(helm repo list -o yaml  | yq r - "[*].name" | grep "$CHART_REPO_MD5") == "$CHART_REPO_MD5" ]]; then
       CHART_REPO_ALREADY_ADDED=true
     else
       CHART_REPO_ALREADY_ADDED=false
@@ -49,24 +49,13 @@ function download {
   fi
 
   if [[ "$CHART_REPO_ALREADY_ADDED" = false ]]; then
-    if [[ "${HELM_VER}" == "v3" ]]; then
-      helmv3 repo rm stable
-      helmv3 repo add stable https://charts.helm.sh/stable
-      helmv3 repo add "${CHART_REPO_MD5}" "${CHART_REPO}"
-      helmv3 repo update
-    else
-      helm repo rm stable
-      helm repo add stable https://charts.helm.sh/stable
-      helm repo add "${CHART_REPO_MD5}" "${CHART_REPO}"
-      helm repo update
-    fi
+    helm repo rm stable
+    helm repo add stable https://charts.helm.sh/stable
+    helm repo add "${CHART_REPO_MD5}" "${CHART_REPO}"
+    helm repo update
   fi
 
-  if [[ ${HELM_VER} == "v3" ]]; then
-    helmv3 fetch --version "${CHART_VERSION}" --untar "${CHART_REPO_MD5}/${CHART_NAME}" --untardir "${2}"
-  else
-    helm fetch --version "${CHART_VERSION}" --untar "${CHART_REPO_MD5}/${CHART_NAME}" --untardir "${2}"
-  fi
+  helm fetch --version "${CHART_VERSION}" --untar "${CHART_REPO_MD5}/${CHART_NAME}" --untardir "${2}"
 
   echo "${CHART_DIR}"
 }
@@ -201,23 +190,13 @@ function validate {
   fi
 
   echo "Writing Helm release to ${TMPDIR}/${HELM_RELEASE_NAME}.release.yaml"
-  if [[ ${HELM_VER} == "v3" ]]; then
-    if [[ "${CHART_PATH}" ]]; then
-      helmv3 dependency build "${CHART_DIR}"
-    fi
-    helmv3 template "${HELM_RELEASE_NAME}" "${CHART_DIR}" \
-      --namespace "${HELM_RELEASE_NAMESPACE}" \
-      --skip-crds=true \
-      -f "${TMPDIR}/${HELM_RELEASE_NAME}.values.yaml" > "${TMPDIR}/${HELM_RELEASE_NAME}.release.yaml"
-  else
-    if [[ "${CHART_PATH}" ]]; then
-      helm dependency build "${CHART_DIR}"
-    fi
-    helm template "${CHART_DIR}" \
-      --name "${HELM_RELEASE_NAME}" \
-      --namespace "${HELM_RELEASE_NAMESPACE}" \
-      -f "${TMPDIR}/${HELM_RELEASE_NAME}.values.yaml" > "${TMPDIR}/${HELM_RELEASE_NAME}.release.yaml"
+  if [[ "${CHART_PATH}" ]]; then
+    helm dependency build "${CHART_DIR}"
   fi
+  helm template "${HELM_RELEASE_NAME}" "${CHART_DIR}" \
+    --namespace "${HELM_RELEASE_NAMESPACE}" \
+    --skip-crds=true \
+    -f "${TMPDIR}/${HELM_RELEASE_NAME}.values.yaml" > "${TMPDIR}/${HELM_RELEASE_NAME}.release.yaml"
 
   echo "Validating Helm release ${HELM_RELEASE_NAME}.${HELM_RELEASE_NAMESPACE} against Kubernetes ${KUBE_VER}"
   kubeval --strict --ignore-missing-schemas --kubernetes-version "${KUBE_VER}" "${TMPDIR}/${HELM_RELEASE_NAME}.release.yaml"
