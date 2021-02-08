@@ -31,13 +31,8 @@ function configurePrivateChartRepositories() {
       repoMD5=$(/bin/echo "$url" | /usr/bin/md5sum | cut -f1 -d" ")
 
       >&2 echo "Adding Helm chart repository '$url'"
-      if [[ ${HELM_VER} == "v3" ]]; then
-        helmv3 repo add "$repoMD5" "${url}" --username "${username}" --password "${password}"
-        helmv3 repo update
-      else
-        helm repo add "$repoMD5" "${url}" --username "${username}" --password "${password}"
-        helm repo update
-      fi
+      helm repo add "$repoMD5" "${url}" --username "${username}" --password "${password}"
+      helm repo update
   done
 }
 
@@ -50,10 +45,6 @@ if [ "${HELM_SOURCES_CACHE_ENABLED}" == "true" ]; then
   CACHEDIR=$(mktemp -d)
 else
   CACHEDIR="${CACHEDIR}"
-fi
-
-if [[ ${HELM_VER} == "v2" ]]; then
-    helm init --client-only
 fi
 
 if [[ ${AWS_S3_REPO} == true ]]; then
